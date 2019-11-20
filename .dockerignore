@@ -1,0 +1,4 @@
+Release/src/*.o 
+Release/src/*.d 
+Release/SplunkEventGenerator
+Debug
