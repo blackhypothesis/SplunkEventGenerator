@@ -1,0 +1,23 @@
+FROM gcc AS builder
+# to get rid of the libboost-all-dev error during install
+RUN mkdir -p /usr/bin/gfortran
+RUN apt-get update
+RUN apt-get -y install libboost-all-dev
+COPY . /SplunkEventGenerator
+WORKDIR /SplunkEventGenerator/Release
+RUN make
+# RUN g++ -L/usr/lib64 -pthread -o "SplunkEventGenerator"  ./src/Event.o ./src/SplunkEventGenerator.o -static  -lboost_system -static -lboost_thread
+# CMD ["./SplunkEventGenerator", "10000"]
+
+# FROM alpine
+# COPY --from=builder /usr/lib/x86_64-linux-gnu/libboost_system.so.1.67.0 /usr/lib
+# COPY --from=builder /usr/lib/x86_64-linux-gnu/libboost_thread.so.1.67.0 /usr/lib
+# COPY --from=builder /SplunkEventGenerator/Release/SplunkEventGenerator /bin
+# WORKDIR /bin
+# CMD ["./SplunkEventGenerator", "10000"]
+
+FROM alpine:3.9
+RUN apk update && apk add boost
+COPY --from=builder /SplunkEventGenerator/Release/SplunkEventGenerator /bin
+WORKDIR bin
+CMD ["./SplunkEventGenerator", "10000"]
