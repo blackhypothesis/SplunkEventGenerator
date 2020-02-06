@@ -44,7 +44,7 @@ std::string EventGenerator::currentDateTime()
 	return dateTimeMilliSeconds.str();
 }
 
-std::string EventGenerator::generate(const unsigned int eventID, const unsigned int minParams, unsigned int maxParams)
+std::string EventGenerator::generate(const unsigned int eventID, const unsigned int minParams,  unsigned int maxParams)
 {
 	const int HI = 100;
 	const int LO = -100;
@@ -83,12 +83,58 @@ std::string EventGenerator::generate(const unsigned int eventID, const unsigned 
 	return event.str();
 }
 
+
 std::string EventGenerator::generate(const unsigned int eventID, const std::string msg)
 {
 	std::stringstream event;
 	event << currentDateTime() << " id=" << eventID << " " << msg << "\n";
 
 	return event.str();
+}
+
+
+void EventGenerator::operator()()
+{
+	long long unsigned int totalBytes = 0;
+	long long unsigned int start_create_event_us = 0;
+	long long unsigned int time_create_event_us = 0;
+
+	for (unsigned int eventID = 1; eventID >=1; eventID++)
+	{
+		if (maxWait_us > 0)
+		{
+			const int wait_us = minWait_us - time_create_event_us + static_cast<int>(rand()) / (static_cast<float>(RAND_MAX / (maxWait_us - minWait_us)));
+			std::this_thread::sleep_for(std::chrono::microseconds(wait_us));
+		}
+
+		start_create_event_us = current_us();
+
+		std::string event;
+
+		if (eventID % skip_events)
+		{
+			event = generate(eventID, minParam, maxParam);
+		}
+		else
+		{
+			std::lock_guard<std::mutex> lock(mtx);
+			auto deltaTime_us = current_us() - startTime_us;
+			auto current_kB_s = static_cast<float>(totalBytes / 1024) / static_cast<float>(deltaTime_us / 1000000);
+			auto pct_kB_s = current_kB_s / kB_s * 100;
+			auto current_kB_event = static_cast<float>(totalBytes / 1024) / eventID;
+			calculated_events_s = static_cast<float>(kB_s / current_kB_event);
+			auto calculated_wait_us_per_event = 1000000 / calculated_events_s;
+			minWait_us = static_cast<int>(calculated_wait_us_per_event * 0.9 * pct_kB_s / 100 * pct_kB_s / 100) - time_create_event_us;
+			maxWait_us = static_cast<int>(calculated_wait_us_per_event * 1.1) - time_create_event_us;
+			skip_events = 2000000 / calculated_wait_us_per_event;
+			event = generate(eventID, "current_kB_s=" + std::to_string(current_kB_s) + " totalBytes=" + std::to_string(totalBytes) + " deltaTime_us=" + std::to_string(deltaTime_us) + " calculted_events_s=" + std::to_string(calculated_events_s));
+		}
+
+		std::cout << event;
+
+		totalBytes += event.size();
+		time_create_event_us = current_us() - start_create_event_us;
+	}
 }
 
 int EventGenerator::operator()(std::string host, std::string port)

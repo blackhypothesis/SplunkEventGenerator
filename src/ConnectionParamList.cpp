@@ -84,14 +84,21 @@ void ConnectionParamList::start()
 	std::vector<std::thread> vecThread;
 	EventGenerator eg(thread_kB_s, minParam, maxParam);
 
-	// for each host:port create a EventGenerator thread
-	for (auto hp : vecDstHostPort)
+	if (vecDstHostPort.size() > 0)
 	{
-		vecThread.push_back(std::thread(std::ref(eg), hp[0], hp[1]));
-	}
+		// for each host:port create a EventGenerator thread
+		for (auto hp : vecDstHostPort)
+		{
+			vecThread.push_back(std::thread(std::ref(eg), hp[0], hp[1]));
+		}
 
-	for (auto& t : vecThread)
-		t.join();
+		for (auto& t : vecThread)
+			t.join();
+	}
+	else
+	{
+		eg();
+	}
 }
 
 

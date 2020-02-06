@@ -34,6 +34,7 @@ private:
 	std::string generate(const unsigned int, const std::string);
 
 public:
+	void operator()();
 	int operator()(std::string, std::string);
 };
 
